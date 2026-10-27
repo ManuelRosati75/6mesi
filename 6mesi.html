@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>La Balena dei 6 Mesi</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@600;800&family=Patrick+Hand&display=swap">
+<style>
+/* Layout: one full-screen scene, whale at center, caption above, button below; canvas behind changes world at each click */
+:root {
+  --ink: #0b1430;
+  --paper: #fffaf3;
+  --whale: #5aa7e0;
+  --whale-dark: #3a7fbe;
+  --belly: #d6ecfb;
+  --hair: #5a3420;
+  --her: #8fb8ea;
+  --her-dark: #6a96d0;
+  --her-hair: #c49a6c;
+  --her-hair-dark: #a87d52;
+  --love: #e8243c;
+  --glow: #ffd9e0;
+  --display: "Baloo 2", "Trebuchet MS", system-ui, sans-serif;
+  --hand: "Patrick Hand", "Comic Sans MS", "Segoe Print", cursive;
+  color-scheme: dark;
+}
+html, body { height: 100%; margin: 0; }
+body {
+  background: var(--ink);
+  color: var(--paper);
+  overflow: hidden;
+  font-family: var(--hand);
+}
+canvas#sky { position: fixed; inset: 0; width: 100%; height: 100%; display: block; }
+.stage {
+  position: relative; z-index: 2; height: 100%;
+  display: grid; grid-template-rows: auto 1fr auto;
+  justify-items: center; text-align: center;
+  padding-left: max(16px, env(safe-area-inset-left, 0px));
+  padding-right: max(16px, env(safe-area-inset-right, 0px));
+  padding-block: 20px 28px;
+  box-sizing: border-box;
+}
+.caption { min-height: 6.5rem; display: grid; align-content: start; gap: 2px; max-width: 34rem; }
+.caption h1 {
+  font-family: var(--display); font-weight: 800; margin: 0;
+  font-size: clamp(1.6rem, 6vw, 2.8rem); line-height: 1.05; text-wrap: balance;
+  text-shadow: 0 2px 18px rgba(0,0,0,.45);
+}
+.caption p { margin: 0; font-size: clamp(1.05rem, 3.6vw, 1.35rem); opacity: .85; letter-spacing: .02em; }
+.fade { animation: fadeUp .7s ease both; }
+@keyframes fadeUp { from { opacity: 0; transform: translateY(10px) } to { opacity: 1; transform: none } }
+
+.center { position: relative; display: grid; place-items: center; width: 100%; }
+.bubble {
+  position: absolute; bottom: calc(50% + min(26vw, 150px)); left: 50%; transform: translateX(-50%);
+  width: min(86vw, 22rem); box-sizing: border-box;
+  background: var(--paper); color: var(--ink);
+  border-radius: 22px; padding: 14px 18px;
+  font-size: clamp(1.15rem, 4.2vw, 1.4rem); line-height: 1.25;
+  box-shadow: 0 10px 30px rgba(0,0,0,.3);
+  transition: opacity .5s, transform .5s;
+}
+.bubble::after {
+  content: ""; position: absolute; left: 50%; bottom: -12px; transform: translateX(-50%);
+  border: 12px solid transparent; border-top-color: var(--paper); border-bottom: 0;
+}
+.bubble.gone { opacity: 0; transform: translateX(-50%) translateY(-10px); pointer-events: none; }
+.bubble b { color: var(--love); }
+
+svg#whale { width: min(70vw, 300px); height: auto; overflow: visible; animation: bob 3.6s ease-in-out infinite; }
+@keyframes bob { 50% { transform: translateY(-8px) } }
+.fin { transform-box: view-box; transition: transform 1.6s cubic-bezier(.3,1.4,.4,1); }
+#finL { transform-origin: 82px 146px; }
+#finR { transform-origin: 218px 146px; }
+
+button#go {
+  font-family: var(--display); font-weight: 800; font-size: 1.25rem;
+  color: #fff; background: var(--love); border: 0; border-radius: 999px;
+  padding: 14px 30px; cursor: pointer;
+  box-shadow: 0 6px 0 #a3142a, 0 12px 28px rgba(232,36,60,.45);
+  transition: transform .12s, box-shadow .12s;
+}
+button#go:hover { transform: translateY(-2px); }
+button#go:active { transform: translateY(4px); box-shadow: 0 2px 0 #a3142a; }
+button#go:focus-visible { outline: 3px solid var(--paper); outline-offset: 4px; }
+
+#heart {
+  position: fixed; inset: 0; z-index: 5; display: grid; place-items: center;
+  pointer-events: none; opacity: 0; transition: opacity .6s;
+}
+#heart.show { opacity: 1; pointer-events: auto; }
+#heart > svg { position: absolute; width: 150vmax; max-width: none; transform: scale(.02); }
+#heart.show > svg { animation: grow 2.4s cubic-bezier(.2,.8,.2,1) forwards; }
+@keyframes grow { to { transform: scale(1) } }
+#heart .msg { position: relative; display: grid; gap: 6px; text-align: center; padding-inline: 16px; opacity: 0; }
+#heart.show .msg { animation: fadeUp 1s 1.6s ease forwards; }
+#heart .msg strong {
+  font-family: var(--display); font-weight: 800; color: #fff;
+  font-size: clamp(2.6rem, 12vw, 6rem); line-height: .95; text-wrap: balance;
+}
+#heart .msg span { font-size: clamp(1.4rem, 5vw, 2.2rem); color: var(--glow); }
+#heart .msg em { font-style: normal; font-size: 1.1rem; color: var(--glow); opacity: .85; margin-top: 8px; letter-spacing: .06em; }
+.couple { display: flex; justify-content: center; align-items: flex-end; margin-bottom: 4px; }
+.couple svg { position: static; width: min(38vw, 190px); max-width: 100%; height: auto; overflow: visible; transform: none; animation: bob 3.6s ease-in-out infinite; }
+.couple svg + svg { margin-left: -14%; animation-delay: -1.8s; }
+.couple .kiss { align-self: flex-start; color: #fff; font-size: 1.8rem; margin-inline: -4px; z-index: 1; animation: beat 1.2s ease-in-out infinite; }
+@keyframes beat { 50% { transform: scale(1.25) } }
+#heart .note { margin: 12px auto 0; max-width: 26rem; color: #fff; font-size: clamp(1.15rem, 4.2vw, 1.5rem); line-height: 1.3; text-wrap: balance; }
+#again {
+  justify-self: center; margin-top: 18px; font: inherit; font-size: 1.1rem;
+  background: transparent; color: #fff; border: 2px solid rgba(255,255,255,.7);
+  border-radius: 999px; padding: 8px 20px; cursor: pointer;
+}
+#again:focus-visible { outline: 3px solid #fff; outline-offset: 3px; }
+.mini { position: fixed; z-index: 6; pointer-events: none; color: #fff; font-size: 22px; animation: rise 3s linear forwards; }
+@keyframes rise { to { transform: translateY(-110vh) rotate(25deg); opacity: 0 } }
+
+@media (prefers-reduced-motion: reduce) {
+  svg#whale, .mini, .couple svg, .couple .kiss { animation: none; }
+  .fin { transition-duration: .3s; }
+}
+</style>
+</head>
+<body>
+
+<canvas id="sky"></canvas>
+
+<main class="stage">
+  <div class="caption" id="caption" aria-live="polite"></div>
+
+  <div class="center">
+    <div class="bubble" id="bubble">
+      Ciao amore! Questi <b>6 mesi</b> con te sono stati super bellissimi. Ti amo tantissimo!
+    </div>
+
+    <svg id="whale" viewBox="0 0 300 230" aria-label="Una balenottera con i capelli ricci">
+      <!-- tail -->
+      <path d="M232 120 C255 95 262 70 258 52 C270 58 290 50 296 38 C292 62 276 76 262 78 C262 96 250 116 236 132 Z" fill="var(--whale-dark)"/>
+      <!-- fins (stylized, these grow) -->
+      <g id="finL" class="fin">
+        <path d="M86 138 C60 130 28 140 10 166 C34 172 66 164 90 156 Z" fill="var(--whale-dark)"/>
+        <path d="M70 146 C52 148 34 156 24 164" stroke="var(--belly)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".6"/>
+      </g>
+      <g id="finR" class="fin">
+        <path d="M214 138 C240 130 272 140 290 166 C266 172 234 164 210 156 Z" fill="var(--whale-dark)"/>
+        <path d="M230 146 C248 148 266 156 276 164" stroke="var(--belly)" stroke-width="2.5" fill="none" stroke-linecap="round" opacity=".6"/>
+      </g>
+      <!-- body -->
+      <ellipse cx="150" cy="140" rx="84" ry="66" fill="var(--whale)"/>
+      <ellipse cx="150" cy="170" rx="58" ry="34" fill="var(--belly)"/>
+      <path d="M112 168 h76 M116 180 h68 M124 192 h52" stroke="var(--whale)" stroke-width="2" opacity=".35"/>
+      <!-- curly hair -->
+      <g fill="var(--hair)">
+        <circle cx="112" cy="86" r="13"/><circle cx="130" cy="76" r="14"/><circle cx="150" cy="72" r="15"/>
+        <circle cx="170" cy="76" r="14"/><circle cx="188" cy="86" r="13"/><circle cx="100" cy="100" r="10"/>
+        <circle cx="200" cy="100" r="10"/><circle cx="140" cy="62" r="10"/><circle cx="161" cy="61" r="10"/>
+      </g>
+      <g stroke="#8a5a3a" stroke-width="2.4" fill="none" stroke-linecap="round">
+        <path d="M108 88 a5 5 0 1 1 6 -5"/><path d="M127 78 a6 6 0 1 1 7 -6"/><path d="M147 74 a6 6 0 1 1 7 -7"/>
+        <path d="M167 78 a6 6 0 1 1 7 -6"/><path d="M185 88 a5 5 0 1 1 6 -5"/><path d="M137 63 a4 4 0 1 1 5 -4"/>
+        <path d="M158 62 a4 4 0 1 1 5 -4"/>
+      </g>
+      <!-- face -->
+      <ellipse cx="124" cy="132" rx="8" ry="10" fill="var(--ink)"/>
+      <ellipse cx="176" cy="132" rx="8" ry="10" fill="var(--ink)"/>
+      <circle cx="127" cy="128" r="3" fill="#fff"/><circle cx="179" cy="128" r="3" fill="#fff"/>
+      <ellipse cx="108" cy="150" rx="10" ry="6" fill="#f59ab0" opacity=".7"/>
+      <ellipse cx="192" cy="150" rx="10" ry="6" fill="#f59ab0" opacity=".7"/>
+      <path d="M138 148 Q150 160 162 148" stroke="var(--ink)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    </svg>
+  </div>
+
+  <button id="go" type="button">Vuoi sapere quanto ti amo?</button>
+</main>
+
+<div id="heart" aria-live="polite">
+  <svg viewBox="0 0 100 92" aria-hidden="true">
+    <path d="M50 90 C20 68 0 50 0 27 C0 11 12 0 26 0 C37 0 45 7 50 15 C55 7 63 0 74 0 C88 0 100 11 100 27 C100 50 80 68 50 90 Z" fill="var(--love)"/>
+  </svg>
+  <div class="msg">
+    <div class="couple">
+    <svg viewBox="0 0 300 230" aria-label="Tu: balena con i capelli ricci">
+      <path d="M232 120 C255 95 262 70 258 52 C270 58 290 50 296 38 C292 62 276 76 262 78 C262 96 250 116 236 132 Z" fill="var(--whale-dark)" transform="translate(300 0) scale(-1 1)"/>
+      <path d="M86 138 C60 130 28 140 10 166 C34 172 66 164 90 156 Z" fill="var(--whale-dark)"/>
+      <path d="M214 138 C240 120 262 100 280 80 C286 104 252 140 210 156 Z" fill="var(--whale-dark)"/>
+      <ellipse cx="150" cy="140" rx="84" ry="66" fill="var(--whale)"/>
+      <ellipse cx="150" cy="170" rx="58" ry="34" fill="var(--belly)"/>
+      <g fill="var(--hair)"><circle cx="112" cy="86" r="13"/><circle cx="130" cy="76" r="14"/><circle cx="150" cy="72" r="15"/><circle cx="170" cy="76" r="14"/><circle cx="188" cy="86" r="13"/><circle cx="100" cy="100" r="10"/><circle cx="200" cy="100" r="10"/><circle cx="140" cy="62" r="10"/><circle cx="161" cy="61" r="10"/></g>
+      <g stroke="#8a5a3a" stroke-width="2.4" fill="none" stroke-linecap="round"><path d="M108 88 a5 5 0 1 1 6 -5"/><path d="M127 78 a6 6 0 1 1 7 -6"/><path d="M147 74 a6 6 0 1 1 7 -7"/><path d="M167 78 a6 6 0 1 1 7 -6"/><path d="M185 88 a5 5 0 1 1 6 -5"/></g>
+      <path d="M116 134 Q124 124 132 134 M168 134 Q176 124 184 134" stroke="var(--ink)" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <ellipse cx="108" cy="150" rx="10" ry="6" fill="#f59ab0" opacity=".8"/><ellipse cx="192" cy="150" rx="10" ry="6" fill="#f59ab0" opacity=".8"/>
+      <path d="M138 148 Q150 160 162 148" stroke="var(--ink)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    <span class="kiss" aria-hidden="true">♥</span>
+    <svg viewBox="0 0 300 230" aria-label="Lei: balena con i capelli castano chiaro e la frangetta">
+      <path d="M232 120 C255 95 262 70 258 52 C270 58 290 50 296 38 C292 62 276 76 262 78 C262 96 250 116 236 132 Z" fill="var(--her-dark)"/>
+      <path d="M86 138 C60 120 38 100 20 80 C14 104 48 140 90 156 Z" fill="var(--her-dark)"/>
+      <path d="M214 138 C240 130 272 140 290 166 C266 172 234 164 210 156 Z" fill="var(--her-dark)"/>
+      <path d="M72 158 C60 90 100 60 150 60 C200 60 240 90 228 158 C222 130 212 110 150 104 C88 110 78 130 72 158 Z" fill="var(--her-hair-dark)"/>
+      <ellipse cx="150" cy="140" rx="84" ry="66" fill="var(--her)"/>
+      <ellipse cx="150" cy="170" rx="58" ry="34" fill="var(--belly)"/>
+      <path d="M90 118 C88 84 116 66 150 66 C184 66 212 84 210 118 L200 110 L190 120 L180 110 L170 120 L160 110 L150 120 L140 110 L130 120 L120 110 L110 120 L100 110 Z" fill="var(--her-hair)"/>
+      <path d="M120 80 C130 74 142 72 152 72" stroke="#e2c49e" stroke-width="4" fill="none" stroke-linecap="round" opacity=".8"/>
+      <path d="M116 136 Q124 126 132 136 M168 136 Q176 126 184 136" stroke="var(--ink)" stroke-width="4" fill="none" stroke-linecap="round"/>
+      <path d="M114 132 l-5 -4 M134 132 l5 -4 M166 132 l-5 -4 M186 132 l5 -4" stroke="var(--ink)" stroke-width="2.5" stroke-linecap="round"/>
+      <ellipse cx="108" cy="152" rx="10" ry="6" fill="#f59ab0" opacity=".85"/><ellipse cx="192" cy="152" rx="10" ry="6" fill="#f59ab0" opacity=".85"/>
+      <path d="M140 150 Q150 160 160 150" stroke="var(--ink)" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+    </svg>
+    </div>
+    <strong>Ti amo amore</strong>
+    <span>Auguri a noi</span>
+    <em>6 MESI INSIEME</em>
+    <p class="note">Non c'è niente che amo più di te.<br>Sono il ragazzo più fortunato del mondo.</p>
+    <button id="again" type="button">Ricomincia</button>
+  </div>
+</div>
+
+<script>
+(() => {
+  const STAGES = [
+    { scale: 1, rot: 0 },
+    { scale: 1, rot: -30, title: "Ti amo grande come una balena vera", sub: "25 metri di amore, tutto per te", btn: "Di più?" },
+    { scale: 1, rot: -30, title: "...più di 100 gattini", sub: "100 gattini morbidosi, e ti amo di più", btn: "Ancora di più?" },
+    { scale: 1, rot: -30, title: "...più di 9.999.999.999 carte di Magic", sub: "e di tutti gli scoiattolini che sconfiggi", btn: "E ancora?" },
+    { scale: 1, rot: -30, title: "...più di tutti i fumetti e i libri del mondo", sub: "", btn: "Ancora?" },
+    { scale: 1, rot: -30, title: "...grande come tutto l'universo", sub: "93 miliardi di anni luce, e non basta", btn: "Più dell'universo?" },
+    { final: true }
+  ];
+  let stage = 0, prev = 0, changedAt = 0;
+
+  const $ = id => document.getElementById(id);
+  const finL = $("finL"), finR = $("finR"), cap = $("caption"), btn = $("go"), bubble = $("bubble"), heart = $("heart");
+
+  function setFins(s) {
+    finL.style.transform = `rotate(${s.rot}deg) scale(${s.scale})`;
+    finR.style.transform = `rotate(${-s.rot}deg) scale(${s.scale})`;
+  }
+
+  function go(n) {
+    prev = stage; stage = n; changedAt = performance.now();
+    const s = STAGES[n];
+    if (s.final) { showHeart(); return; }
+    setFins(s);
+    bubble.classList.toggle("gone", n > 0);
+    cap.innerHTML = n ? `<h1 class="fade">${s.title}</h1><p class="fade">${s.sub}</p>` : "";
+    btn.textContent = n ? s.btn : "Vuoi sapere quanto ti amo?";
+  }
+
+  function showHeart() {
+    heart.classList.add("show");
+    let i = 0;
+    const iv = setInterval(() => {
+      const h = document.createElement("div");
+      h.className = "mini"; h.textContent = "♥";
+      h.style.left = Math.random() * 100 + "vw";
+      h.style.bottom = "-30px";
+      h.style.fontSize = 14 + Math.random() * 26 + "px";
+      document.body.appendChild(h);
+      setTimeout(() => h.remove(), 3100);
+      if (++i > 40) clearInterval(iv);
+    }, 120);
+  }
+
+  btn.addEventListener("click", () => go(Math.min(stage + 1, STAGES.length - 1)));
+  $("again").addEventListener("click", () => {
+    heart.classList.remove("show");
+    const svg = heart.querySelector("svg"); svg.style.animation = "none"; void svg.offsetWidth; svg.style.animation = "";
+    go(0);
+  });
+
+  /* ---------- background worlds ---------- */
+  const cv = $("sky"), ctx = cv.getContext("2d");
+  let W, H, dpr;
+  const rnd = (a, b) => a + Math.random() * (b - a);
+  const stars = Array.from({ length: 260 }, () => ({ x: Math.random(), y: Math.random(), r: rnd(.3, 1.6), p: rnd(0, 6.28) }));
+  const bubbles = Array.from({ length: 30 }, () => ({ x: Math.random(), y: Math.random(), r: rnd(2, 7), v: rnd(.02, .06) }));
+  const spiral = Array.from({ length: 1400 }, (_, i) => {
+    const arm = i % 2, d = Math.pow(Math.random(), .7);
+    return { d, a: d * 7 + arm * Math.PI + rnd(-.35, .35), s: rnd(.5, 1.8), c: Math.random() };
+  });
+  const galaxies = Array.from({ length: 90 }, () => ({ x: Math.random(), y: Math.random(), r: rnd(3, 14), rot: rnd(0, 3.14), h: rnd(180, 340) }));
+  const kittens = Array.from({ length: 100 }, (_, i) => ({ x: (i % 10 + .5 + rnd(-.2, .2)) / 10, y: (Math.floor(i / 10) + .5 + rnd(-.2, .2)) / 10, s: rnd(.8, 1.2), c: ["#f2a65a", "#8a8a8a", "#f4efe6", "#3a3030", "#d9a77a"][i % 5], p: rnd(0, 6.28) }));
+  const cards = Array.from({ length: 140 }, () => ({ x: Math.random(), y: Math.random(), r: rnd(-.6, .6), v: rnd(.03, .09), s: rnd(.7, 1.3), vr: rnd(-.5, .5) }));
+  const BOOK_COLORS = ["#d94f3d", "#2f6db5", "#f2c14e", "#3a9d6b", "#8e5bb5", "#e98a3c", "#1f3b5c", "#c7a07a"];
+  const books = Array.from({ length: 90 }, (_, i) => ({ x: Math.random(), y: Math.random(), r: rnd(-.8, .8), v: rnd(.02, .07), w: rnd(26, 46), h: rnd(34, 56), c: BOOK_COLORS[i % BOOK_COLORS.length], comic: i % 3 === 0 }));
+  const continents = Array.from({ length: 9 }, () => ({ x: rnd(-.7, .7), y: rnd(-.7, .7), rx: rnd(.15, .4), ry: rnd(.1, .25), r: rnd(0, 3) }));
+
+  function resize() {
+    dpr = Math.min(window.devicePixelRatio || 1, 2);
+    W = innerWidth; H = innerHeight;
+    cv.width = W * dpr; cv.height = H * dpr;
+    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+  }
+  addEventListener("resize", resize); resize();
+
+  function drawStars(t, n = 1) {
+    ctx.fillStyle = "#fff";
+    for (const s of stars) {
+      ctx.globalAlpha *= 1;
+      const a = .4 + .6 * Math.abs(Math.sin(t / 900 + s.p));
+      ctx.save(); ctx.globalAlpha *= a;
+      ctx.beginPath(); ctx.arc(s.x * W, s.y * H, s.r * n, 0, 7); ctx.fill(); ctx.restore();
+    }
+  }
+
+  const worlds = [
+    function ocean(t) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#2a8fc4"); g.addColorStop(.55, "#0e4d86"); g.addColorStop(1, "#06213f");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      ctx.save(); ctx.globalAlpha *= .08; ctx.fillStyle = "#fff";
+      for (let i = 0; i < 5; i++) {
+        const x = W * (i / 5) + Math.sin(t / 3000 + i) * 40;
+        ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x + 60, 0); ctx.lineTo(x + 220, H); ctx.lineTo(x + 120, H); ctx.fill();
+      }
+      ctx.restore();
+      ctx.save(); ctx.strokeStyle = "rgba(255,255,255,.5)"; ctx.lineWidth = 1.5;
+      for (const b of bubbles) {
+        const y = ((b.y - t / 1000 * b.v) % 1 + 1) % 1;
+        ctx.beginPath(); ctx.arc(b.x * W + Math.sin(t / 700 + b.x * 9) * 6, y * H, b.r, 0, 7); ctx.stroke();
+      }
+      ctx.restore();
+    },
+    null,
+    function kitties(t) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#ffd3c4"); g.addColorStop(1, "#f28fa3");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      const base = Math.min(W / 10, H / 10) * .32;
+      for (const k of kittens) {
+        const x = k.x * W, y = k.y * H + Math.sin(t / 600 + k.p) * 3, r = base * k.s;
+        ctx.fillStyle = k.c;
+        ctx.beginPath(); ctx.moveTo(x - r * .9, y - r * .3); ctx.lineTo(x - r * .75, y - r * 1.25); ctx.lineTo(x - r * .2, y - r * .8); ctx.fill();
+        ctx.beginPath(); ctx.moveTo(x + r * .9, y - r * .3); ctx.lineTo(x + r * .75, y - r * 1.25); ctx.lineTo(x + r * .2, y - r * .8); ctx.fill();
+        ctx.beginPath(); ctx.ellipse(x, y, r, r * .85, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = "#2a1a1a";
+        const blink = Math.sin(t / 400 + k.p * 5) > .97 ? .15 : 1;
+        ctx.beginPath(); ctx.ellipse(x - r * .35, y - r * .1, r * .1, r * .14 * blink, 0, 0, 7); ctx.ellipse(x + r * .35, y - r * .1, r * .1, r * .14 * blink, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = "#f06c8a"; ctx.beginPath(); ctx.arc(x, y + r * .15, r * .08, 0, 7); ctx.fill();
+      }
+    },
+    function earth(t) {
+      ctx.fillStyle = "#050a1f"; ctx.fillRect(0, 0, W, H); drawStars(t);
+      const R = Math.min(W, H) * .44, cx = W / 2, cy = H * .55;
+      const glow = ctx.createRadialGradient(cx, cy, R * .9, cx, cy, R * 1.25);
+      glow.addColorStop(0, "rgba(120,190,255,.5)"); glow.addColorStop(1, "rgba(120,190,255,0)");
+      ctx.fillStyle = glow; ctx.beginPath(); ctx.arc(cx, cy, R * 1.25, 0, 7); ctx.fill();
+      ctx.save(); ctx.beginPath(); ctx.arc(cx, cy, R, 0, 7); ctx.clip();
+      ctx.fillStyle = "#1f6fc0"; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+      const off = (t / 40000) % 2;
+      ctx.fillStyle = "#3fa55a";
+      for (const c of continents) {
+        const x = cx + ((((c.x + off) + 1) % 2) - 1) * R;
+        ctx.beginPath(); ctx.ellipse(x, cy + c.y * R, c.rx * R, c.ry * R, c.r, 0, 7); ctx.fill();
+      }
+      const sh = ctx.createRadialGradient(cx - R * .4, cy - R * .4, R * .2, cx, cy, R * 1.1);
+      sh.addColorStop(0, "rgba(255,255,255,.18)"); sh.addColorStop(.6, "rgba(0,0,0,0)"); sh.addColorStop(1, "rgba(0,0,20,.55)");
+      ctx.fillStyle = sh; ctx.fillRect(cx - R, cy - R, R * 2, R * 2);
+      ctx.restore();
+    },
+    function magic(t) {
+      ctx.fillStyle = "#120b26"; ctx.fillRect(0, 0, W, H); drawStars(t, .7);
+      const cw = Math.max(26, Math.min(W, H) * .07);
+      for (const c of cards) {
+        const y = ((c.y + t / 1000 * c.v) % 1.2) - .1;
+        ctx.save(); ctx.translate(c.x * W, y * H); ctx.rotate(c.r + t / 1000 * c.vr);
+        const w = cw * c.s, h = w * 1.4;
+        ctx.fillStyle = "#1a1210"; ctx.fillRect(-w / 2 - 2, -h / 2 - 2, w + 4, h + 4);
+        ctx.fillStyle = "#6b4426"; ctx.fillRect(-w / 2, -h / 2, w, h);
+        ctx.fillStyle = "#2c4f8a"; ctx.beginPath(); ctx.ellipse(0, 0, w * .32, h * .3, 0, 0, 7); ctx.fill();
+        ctx.fillStyle = "#e3b35a"; ctx.beginPath(); ctx.arc(0, 0, w * .12, 0, 7); ctx.fill();
+        ctx.restore();
+      }
+    },
+    function library(t) {
+      const g = ctx.createLinearGradient(0, 0, 0, H);
+      g.addColorStop(0, "#2b1a12"); g.addColorStop(1, "#4a2c1a");
+      ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      const unit = Math.min(W, H) / 700 + .5;
+      for (const b of books) {
+        const y = ((b.y - t / 1000 * b.v) % 1.2 + 1.2) % 1.2 - .1;
+        ctx.save(); ctx.translate(b.x * W, y * H); ctx.rotate(b.r + Math.sin(t / 900 + b.x * 10) * .2);
+        const w = b.w * unit, h = b.h * unit;
+        ctx.fillStyle = b.c; ctx.fillRect(-w / 2, -h / 2, w, h);
+        if (b.comic) {
+          ctx.fillStyle = "#fff"; ctx.fillRect(-w / 2 + 3, -h / 2 + 3, w - 6, h * .28);
+          ctx.fillStyle = "#222"; ctx.font = `bold ${Math.round(h * .16)}px sans-serif`; ctx.textAlign = "center"; ctx.textBaseline = "middle";
+          ctx.fillText("POW!", 0, -h / 2 + 3 + h * .14);
+        } else {
+          ctx.fillStyle = "rgba(255,255,255,.85)"; ctx.fillRect(-w / 2 + 4, -h * .1, w - 8, 3); ctx.fillRect(-w / 2 + 4, h * .05, w - 8, 2);
+          ctx.fillStyle = "rgba(0,0,0,.25)"; ctx.fillRect(-w / 2, -h / 2, 4, h);
+        }
+        ctx.restore();
+      }
+    },
+    function galaxy(t) {
+      ctx.fillStyle = "#070418"; ctx.fillRect(0, 0, W, H); drawStars(t, .8);
+      const cx = W / 2, cy = H * .52, R = Math.max(W, H) * .55, rot = t / 9000;
+      const core = ctx.createRadialGradient(cx, cy, 0, cx, cy, R * .35);
+      core.addColorStop(0, "rgba(255,230,200,.9)"); core.addColorStop(1, "rgba(160,100,255,0)");
+      ctx.fillStyle = core; ctx.beginPath(); ctx.arc(cx, cy, R * .35, 0, 7); ctx.fill();
+      for (const p of spiral) {
+        const a = p.a + rot, r = p.d * R;
+        ctx.fillStyle = p.c < .5 ? "#cdb7ff" : p.c < .8 ? "#ffffff" : "#ffb3d1";
+        ctx.fillRect(cx + Math.cos(a) * r, cy + Math.sin(a) * r * .55, p.s, p.s);
+      }
+    },
+    function universe(t) {
+      ctx.fillStyle = "#020108"; ctx.fillRect(0, 0, W, H);
+      const neb = [[.25, .3, "rgba(200,60,160,.28)"], [.75, .65, "rgba(60,120,255,.25)"], [.5, .85, "rgba(255,120,80,.18)"]];
+      for (const [x, y, c] of neb) {
+        const g = ctx.createRadialGradient(x * W, y * H, 0, x * W, y * H, Math.max(W, H) * .5);
+        g.addColorStop(0, c); g.addColorStop(1, "rgba(0,0,0,0)");
+        ctx.fillStyle = g; ctx.fillRect(0, 0, W, H);
+      }
+      drawStars(t, .6);
+      for (const g of galaxies) {
+        ctx.save(); ctx.translate(g.x * W, g.y * H); ctx.rotate(g.rot + t / 20000);
+        const gr = ctx.createRadialGradient(0, 0, 0, 0, 0, g.r);
+        gr.addColorStop(0, "rgba(255,255,255,.95)"); gr.addColorStop(1, `hsla(${g.h},80%,70%,0)`);
+        ctx.scale(1, .45); ctx.fillStyle = gr; ctx.beginPath(); ctx.arc(0, 0, g.r, 0, 7); ctx.fill(); ctx.restore();
+      }
+    }
+  ];
+  // stage index -> world: intro and whale = ocean, ..., final heart = universe
+  const order = worlds.filter(Boolean);
+  worlds.length = 0;
+  worlds.push(order[0], order[0], order[1], order[3], order[4], order[6], order[6]);
+
+  function frame(t) {
+    const p = Math.min(1, (performance.now() - changedAt) / 1400);
+    ctx.globalAlpha = 1; worlds[stage](t);
+    if (p < 1 && worlds[prev] !== worlds[stage]) { ctx.globalAlpha = 1 - p; worlds[prev](t); ctx.globalAlpha = 1; }
+    requestAnimationFrame(frame);
+  }
+  requestAnimationFrame(frame);
+  go(0);
+})();
+</script>
+</body>
+</html>
